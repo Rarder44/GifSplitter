@@ -4,7 +4,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{BA163337-93C8-4BDA-AB02-5867AB3CE51C}</ProjectGuid>
+    <ProjectGuid>{9A41535F-E3B5-4111-83B8-39EE45AB64C9}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>GifSplitter</RootNamespace>
     <AssemblyName>GifSplitter</AssemblyName>
@@ -53,6 +53,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="Form1.resx">
+      <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
