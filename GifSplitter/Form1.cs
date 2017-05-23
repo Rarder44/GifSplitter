@@ -7,6 +7,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -31,54 +32,76 @@ namespace GifSplitter
             comboBox2.SelectedItem = TipoOut.File_Unico;
         }
 
-        GifSplitter g = null;
+        Thread Worker = null;
         private void button1_Click(object sender, EventArgs e)
         {
-            g = new GifSplitter(textBox_sorgente.Text);
-            g.ProgressChange += G_ProgressChange;
-            g.StateChange += G_StateChange;
+            if (Worker != null && Worker.IsAlive)
+                Worker.Abort();
 
-            String path=Directory.GetParent(textBox_sorgente.Text).FullName;
-            String FileName = Path.GetFileNameWithoutExtension(textBox_sorgente.Text);
+            Worker = new Thread(ThreadSplit);
+            Worker.Start(new ThreadParameter(textBox_sorgente.Text,(TipoOut)comboBox2.SelectedItem, (FormatoOut)comboBox1.SelectedItem));
+             
+        }
 
-            if((TipoOut)comboBox2.SelectedItem== TipoOut.File_Separati)
+
+        public void ThreadSplit(object o)
+        {
+            ThreadParameter tp = (ThreadParameter)o;
+
+            this.SetEnableInvoke(false);
+            MaximumSet = false;
+
+
+            GifSplitter g = new GifSplitter();
+            g.ProgressChange += ProgressChange;
+            g.StateChange += StateChange;
+            ImageCollection ic = g.Split(tp.Sorgente);
+
+            ImageCollectionManager icm = new ImageCollectionManager(ic);
+            icm.ProgressChange += ProgressChange;
+            icm.StateChange += StateChange;
+
+            String path = Directory.GetParent(tp.Sorgente).FullName;
+            String FileName = Path.GetFileNameWithoutExtension(tp.Sorgente);
+
+            if (tp.tipoOut == TipoOut.File_Separati)
             {
                 String PathOut = Path.Combine(path, FileName);
-                g.Split(PathOut, FileName,(FormatoOut)comboBox1.SelectedItem);
+                icm.Export(PathOut, FileName, tp.formatoOut);
             }
             else
             {
-                String OutFile=Path.Combine(path, FileName + "." + (FormatoOut)comboBox1.SelectedItem);
-                using (StreamWriter sw = new StreamWriter(OutFile))
-                {
-                    g.Split(sw, (FormatoOut)comboBox1.SelectedItem);
-                }
-
+                String OutFile = Path.Combine(path, FileName + "." + tp.formatoOut);
+                icm.Export(OutFile, tp.formatoOut);
             }
 
+
+            g = null;
+            ic.Dispose();
+
+
+            this.SetEnableInvoke(true);
         }
 
-        private void G_StateChange(GifSplitter This,GifSplitter.State state)
+        
+
+        bool MaximumSet = false;
+        private void ProgressChange(object Self, int Now, int Total)
         {
-            if(state==GifSplitter.State.InWorking)
+            progressBar1.SetValueInvoke(Now + 1);
+            if (!MaximumSet)
             {
-                this.Enabled = false;
-                progressBar1.Maximum = This.FrameCount;
-                
+                MaximumSet = true;
+                progressBar1.SetMaximumInvoke(Total);
             }
-            else if(state == GifSplitter.State.Finish)
-            {
-                this.Enabled = true;
-                progressBar1.Value = progressBar1.Maximum;
-            }
-
         }
-
-        private void G_ProgressChange(GifSplitter This, int Now, int Total)
+        private void StateChange(object This, State state)
         {
-            progressBar1.Value = Now+1;
+            if(state==State.Finish)
+            {
+                progressBar1.SetValueInvoke(progressBar1.GetMaximumInvoke());
+            }
         }
-
 
         private void button2_Click(object sender, EventArgs e)
         {
@@ -95,169 +118,19 @@ namespace GifSplitter
 
 
 
-    public class GifSplitter
+    class ThreadParameter
     {
-        public int FrameCount
+        public TipoOut tipoOut;
+        public FormatoOut formatoOut;
+        public String Sorgente;
+
+        public ThreadParameter(String Sorgente,TipoOut TO, FormatoOut FO)
         {
-            get
-            {
-                return frameCount;
-            }
+            this.Sorgente = Sorgente;
+            this.tipoOut = TO;
+            this.formatoOut = FO;
         }
 
-
-        Size OriginalSize,FinalSize;
-        int Colonne, Righe;
-        int frameCount;
-
-        Image gifImg;
-        FrameDimension dimension;
-
-        public GifSplitter(String Path)
-        {
-            gifImg = Image.FromFile(Path);
-            dimension = new FrameDimension(gifImg.FrameDimensionsList[0]);
-            frameCount = gifImg.GetFrameCount(dimension);
-
-
-            CalcolaRigheColonne(frameCount);
-            SetImageSize(gifImg.Size);
-
-        }
-
-
-        private void CalcolaRigheColonne(int NumeroFrame)
-        {
-            //Calcolo le Colonne
-            Colonne = 10;
-
-            //Calcolo le righe
-            Righe = (NumeroFrame / Colonne) + 1;
-        }
-        private void SetImageSize(Size OriginalSize)
-        {
-            this.OriginalSize = OriginalSize;
-            FinalSize = new Size(Colonne * OriginalSize.Width, Righe * OriginalSize.Height);
-        }
-
-        private Point GetPointToPrint(int r, int c)
-        {
-            return new Point(c * OriginalSize.Width, r * OriginalSize.Height);
-        }
-
-        public void Split(String PathOut,String OriginalName, FormatoOut FormatoOutput = FormatoOut.jpg)
-        {
-            StateChange?.Invoke(this, State.InWorking);
-
-
-            if (!Directory.Exists(PathOut))
-                Directory.CreateDirectory(PathOut);
-
-            Bitmap b = new Bitmap(FinalSize.Width, FinalSize.Height);
-
-            Graphics g = Graphics.FromImage(b);
-
-           
-
-            ImageFormat format;
-            if (FormatoOutput == FormatoOut.jpg)
-                format = ImageFormat.Jpeg;
-            else if (FormatoOutput == FormatoOut.png)
-                format = ImageFormat.Png;
-            else if (FormatoOutput == FormatoOut.bmp)
-                format = ImageFormat.Bmp;
-            else
-                format = ImageFormat.Jpeg;
-
-
-            String Ext = FormatoOutput.ToString();
-
-
-
-            for (int i = 0; i < frameCount; i++)
-            {
-                ProgressChange?.Invoke(this, i, frameCount);
-                gifImg.SelectActiveFrame(dimension, i);
-                gifImg.Save(Path.Combine(PathOut, OriginalName +"_"+i+ "." + Ext), format);   
-            }
-
-            StateChange?.Invoke(this, State.Finish);
-
-        }
-
-        public void Split(StreamWriter sw ,FormatoOut FormatoOutput =FormatoOut.jpg)
-        {
-            StateChange?.Invoke(this,State.InWorking);
-
-
-            Bitmap b = new Bitmap(FinalSize.Width, FinalSize.Height);
-
-            Graphics g = Graphics.FromImage(b);
-
-            int r = 0, c = 0;
-
-            for (int i = 0; i < frameCount; i++)
-            {
-                ProgressChange?.Invoke(this,i, frameCount);
-
-                gifImg.SelectActiveFrame(dimension, i);
-                g.DrawImage(gifImg, GetPointToPrint(r, c));
-
-                c++;
-                if(c>=Colonne)
-                {
-                    c = 0;
-                    r++;
-                }
-
-                if(r>=Righe)
-                {
-                    break;
-                }
-
-            }
-            if (FormatoOutput  == FormatoOut.jpg)
-                b.Save(sw.BaseStream, ImageFormat.Jpeg);
-            else if (FormatoOutput  == FormatoOut.png)
-                b.Save(sw.BaseStream, ImageFormat.Png);
-            else if (FormatoOutput  == FormatoOut.bmp)
-                b.Save(sw.BaseStream, ImageFormat.Bmp);
-
-
-            StateChange?.Invoke(this,State.Finish);
-        }
-
-
-
-
-        public delegate void ProgressChangeEventHandler(GifSplitter This, int Now,int Total);
-        public delegate void StateChangeEventHandler(GifSplitter This, State state);
-
-        public event ProgressChangeEventHandler ProgressChange;
-        public event StateChangeEventHandler StateChange;
-
-
-        public enum State
-        {
-            NotWorking,
-            InWorking,
-            Finish
-        }
     }
-
-
-
-    public enum FormatoOut
-    {
-        png,
-        jpg,
-        bmp
-    }
-    public enum TipoOut
-    {
-        File_Separati,
-        File_Unico
-    }
-
 
 }
