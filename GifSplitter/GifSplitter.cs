@@ -25,7 +25,8 @@ namespace GifSplitter
             {
                 ProgressChange?.Invoke(this, i, frameCount);
                 gifImg.SelectActiveFrame(dimension, i);
-                ic.Collection.Add((Image)gifImg.Clone());
+                ic.Collection.Add(gifImg.CloneFast());
+
             }
 
             StateChange?.Invoke(this, State.Finish);
@@ -37,6 +38,9 @@ namespace GifSplitter
 
         public event ProgressChangeEventHandler<GifSplitter> ProgressChange;
         public event StateChangeEventHandler<GifSplitter> StateChange;
+
+
+        
 
     }
 

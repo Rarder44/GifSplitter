@@ -110,14 +110,15 @@ namespace GifSplitter
             int r = 0, c = 0;
 
             int current = 0;
+
             foreach ( Image i in ic.Collection)
             {
                 ProgressChange?.Invoke(this, current++, NumeroFrame);
 
                 //Calcolo il punto di inserimento del frame nell'immagine grande
                 Point p= new Point(c * OriginalSize.Width, r * OriginalSize.Height);
-                g.DrawImage(i,p);
-               
+                g.DrawImageUnscaled(i,p);
+                
                 c++;
                 if (c >= Colonne)
                 {
