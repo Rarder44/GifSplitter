@@ -7,10 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GifSplitter
+namespace GifSplitterNameSpace
 {
     class ImageCollectionManager
     {
+        public int Colonne=10;
+
         ImageCollection ic;
 
         public ImageCollectionManager( ImageCollection ic )
@@ -93,11 +95,10 @@ namespace GifSplitter
             int NumeroFrame = ic.Count;
 
 
-            //Calcolo le Colonne
-            int Colonne = 10;
 
             //Calcolo le righe
-            int Righe = (NumeroFrame / Colonne) + 1;
+            
+            int Righe = (int)Math.Ceiling(NumeroFrame / (float)Colonne);
 
             //Calcolo grandezza immagine finale
             Size FinalSize = new Size(Colonne * OriginalSize.Width, Righe * OriginalSize.Height);
@@ -171,6 +172,12 @@ namespace GifSplitter
         public event StateChangeEventHandler<ImageCollectionManager> StateChange;
 
 
+
+        public void SetCollection(ImageCollection ic)
+        {
+            this.ic = ic;
+            
+        }
     }
 
 
