@@ -70,41 +70,50 @@ namespace GifSplitterNameSpace
             {
                 StateChangeGeneral(This, state, namedProgressBar1);
             };
-        
 
-
-
-            ImageCollection ic = g.Split(tp.Sorgente);
-
-            ImageCollectionManager icm = new ImageCollectionManager(ic);
-            icm.ProgressChange += (ImageCollectionManager Self, int Now, int Total)=>
-            {
-                ProgressChangeGeneral(Self, Now, Total, namedProgressBar2);
-            };
-            icm.StateChange += (ImageCollectionManager This, State state) =>
-            {
-                StateChangeGeneral(This, state, namedProgressBar2);
-            };
-
-
-            String path = Directory.GetParent(tp.Sorgente).FullName;
-            String FileName = Path.GetFileNameWithoutExtension(tp.Sorgente);
+            
 
             if (tp.tipoOut == TipoOut.File_Separati)
             {
+                String path = Directory.GetParent(tp.Sorgente).FullName;
+                String FileName = Path.GetFileNameWithoutExtension(tp.Sorgente);
                 String PathOut = Path.Combine(path, FileName);
-                icm.Export(PathOut, FileName, tp.formatoOut);
+                String Ext = tp.formatoOut.ToString();
+                int i = 0;
+
+                if (!Directory.Exists(PathOut))
+                    Directory.CreateDirectory(PathOut);
+
+
+                g.ElementFinish+= (Image This) => {
+                    ImageCollectionManager.ExportSingle(This, tp.formatoOut, Path.Combine(PathOut, FileName + "_" + i + "." + Ext));
+                    i++;
+                };
+                g.SplitOneByOne(tp.Sorgente);
             }
             else
             {
+                ImageCollection ic = g.Split(tp.Sorgente);
+                ImageCollectionManager icm = new ImageCollectionManager(ic);
+                icm.ProgressChange += (ImageCollectionManager Self, int Now, int Total) =>
+                {
+                    ProgressChangeGeneral(Self, Now, Total, namedProgressBar2);
+                };
+                icm.StateChange += (ImageCollectionManager This, State state) =>
+                {
+                    StateChangeGeneral(This, state, namedProgressBar2);
+                };
+
+
+                String path = Directory.GetParent(tp.Sorgente).FullName;
+                String FileName = Path.GetFileNameWithoutExtension(tp.Sorgente);
+
                 String OutFile = Path.Combine(path, FileName + "." + tp.formatoOut);
                 icm.Export(OutFile, tp.formatoOut);
+                ic.Dispose();
             }
-
-
             g = null;
-            ic.Dispose();
-
+            
 
             this.SetEnableInvoke(true);
         }

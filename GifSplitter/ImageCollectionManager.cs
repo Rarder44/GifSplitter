@@ -62,7 +62,7 @@ namespace GifSplitterNameSpace
             foreach( Image i in ic.Collection)
             {
                 ProgressChange?.Invoke(this, current++, tot);
-                i.Save(Path.Combine(PathOut, OriginalName + "_" + current + "." + Ext), format);
+                ExportSingle(i, format, Path.Combine(PathOut, OriginalName + "_" + current + "." + Ext));
             }
 
 
@@ -72,6 +72,25 @@ namespace GifSplitterNameSpace
 
         }
 
+
+        public static void ExportSingle(Image immagine, ImageFormat formato,String PathFile )
+        {
+            immagine.Save(PathFile, formato);
+        }
+        public static void ExportSingle(Image immagine, FormatoOut FormatoOutput, String PathFile)
+        {
+            ImageFormat format;
+            if (FormatoOutput == FormatoOut.jpg)
+                format = ImageFormat.Jpeg;
+            else if (FormatoOutput == FormatoOut.png)
+                format = ImageFormat.Png;
+            else if (FormatoOutput == FormatoOut.bmp)
+                format = ImageFormat.Bmp;
+            else
+                format = ImageFormat.Jpeg;
+
+            ExportSingle(immagine, format, PathFile);
+        }
 
         /// <summary>
         /// Permette di esportare tutte le immagini in un unico file ( file sprite ); i dati vengono inviati ad uno stream
